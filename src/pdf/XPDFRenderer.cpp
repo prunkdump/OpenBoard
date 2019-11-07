@@ -24,55 +24,28 @@
  * along with OpenBoard. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
-
-
 #include "XPDFRenderer.h"
 
 #include <QtGui>
 
 #include <frameworks/UBPlatformUtils.h>
-#include <poppler/cpp/poppler-version.h>
 
 #include "core/memcheck.h"
-
-QAtomicInt XPDFRenderer::sInstancesCount = 0;
+#include <poppler-qt5.h>
 
 XPDFRenderer::XPDFRenderer(const QString &filename, bool importingFile)
     : mDocument(0)
-    , mpSplashBitmap(0)
-    , mSplash(0)
 {
     Q_UNUSED(importingFile);
-    if (!globalParams)
-    {
-        // globalParams must be allocated once and never be deleted
-        // note that this is *not* an instance variable of this XPDFRenderer class
-        globalParams = new GlobalParams(0);
-        globalParams->setupBaseFonts(QFile::encodeName(UBPlatformUtils::applicationResourcesDirectory() + "/" + "fonts").data());
-    }
 
-    mDocument = new PDFDoc(new GooString(filename.toLocal8Bit()), 0, 0, 0); // the filename GString is deleted on PDFDoc desctruction
-    sInstancesCount.ref();
+    mDocument = Poppler::Document::load(filename);
 }
 
 XPDFRenderer::~XPDFRenderer()
 {
-    if(mSplash){
-        delete mSplash;
-        mSplash = NULL;
-    }
-
     if (mDocument)
     {
         delete mDocument;
-        sInstancesCount.deref();
-    }
-
-    if (sInstancesCount.loadAcquire() == 0 && globalParams)
-    {
-        delete globalParams;
-        globalParams = 0;
     }
 }
 
@@ -80,7 +53,7 @@ bool XPDFRenderer::isValid() const
 {
     if (mDocument)
     {
-        return mDocument->isOk();
+        return ! mDocument->isLocked();
     }
     else
     {
@@ -91,73 +64,64 @@ bool XPDFRenderer::isValid() const
 int XPDFRenderer::pageCount() const
 {
     if (isValid())
-        return mDocument->getNumPages();
-    else
-        return 0;
+        return mDocument->numPages();
+
+    return 0;
 }
 
 QString XPDFRenderer::title() const
 {
     if (isValid())
     {
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 55
-        Object pdfInfo = mDocument->getDocInfo();
-#else
-        Object pdfInfo;
-        mDocument->getDocInfo(&pdfInfo);
-#endif
-        if (pdfInfo.isDict())
-        {
-            Dict *infoDict = pdfInfo.getDict();
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 55
-            Object title = infoDict->lookup((char*)"Title");
-#else
-            Object title;
-            infoDict->lookup((char*)"Title", &title);
-#endif
-            if (title.isString())
-            {
-#if POPPLER_VERSION_MAJOR > 0 || POPPLER_VERSION_MINOR >= 72
-                return QString(title.getString()->c_str());
-#else
-                return QString(title.getString()->getCString());
-#endif
-            }
-        }
+        return mDocument->title();
     }
 
     return QString();
 }
 
 
+
 QSizeF XPDFRenderer::pageSizeF(int pageNumber) const
 {
-    qreal cropWidth = 0;
-    qreal cropHeight = 0;
+    // BUG : this->dpiForRendering is 0.0
+    //qreal dpiFactor = this->dpiForRendering / 72.0;
+    qreal dpiFactor = 1.0;
 
     if (isValid())
     {
-        int rotate = mDocument->getPageRotate(pageNumber);
+        Poppler::Page* pdfPage = mDocument->page(pageNumber - 1);
 
-        cropWidth = mDocument->getPageCropWidth(pageNumber) * this->dpiForRendering / 72.0;
-        cropHeight = mDocument->getPageCropHeight(pageNumber) * this->dpiForRendering / 72.0;
+        QSizeF pdfPageSizeF = pdfPage->pageSizeF();
+        pdfPageSizeF *= dpiFactor;
 
-        if (rotate == 90 || rotate == 270)
-        {
-            //switching width and height
-            qreal tmpVar = cropWidth;
-            cropWidth = cropHeight;
-            cropHeight = tmpVar;
-        }
+        return pdfPageSizeF;
     }
-    return QSizeF(cropWidth, cropHeight);
+
+    return QSizeF(0.0, 0.0);
 }
 
 
 int XPDFRenderer::pageRotation(int pageNumber) const
 {
-    if (mDocument)
-        return  mDocument->getPageRotate(pageNumber);
+
+    if (isValid())
+    {
+        Poppler::Page* pdfPage = mDocument->page(pageNumber - 1);
+        Poppler::Page::Orientation pdfPageOrientation = pdfPage->orientation();
+
+        if ( pdfPageOrientation == Poppler::Page::Orientation::Portrait )
+            return 0;
+
+        else if( pdfPageOrientation == Poppler::Page::Orientation::Landscape )
+            return 90;
+
+        else if( pdfPageOrientation == Poppler::Page::Orientation::UpsideDown )
+            return 180;
+
+        else
+            return 270;
+
+    }
     else
         return 0;
 }
@@ -166,51 +130,50 @@ void XPDFRenderer::render(QPainter *p, int pageNumber, const QRectF &bounds)
 {
     if (isValid())
     {
-        qreal xscale = p->worldTransform().m11();
-        qreal yscale = p->worldTransform().m22();
 
-        QImage *pdfImage = createPDFImage(pageNumber, xscale, yscale, bounds);
+        Poppler::Page* pdfPage = mDocument->page(pageNumber - 1);
+
         QTransform savedTransform = p->worldTransform();
-        p->resetTransform();
-        p->drawImage(QPointF(savedTransform.dx() + mSliceX, savedTransform.dy() + mSliceY), *pdfImage);
-        p->setWorldTransform(savedTransform);
-        delete pdfImage;
-    }
-}
+        QTransform withoutScaleTransform(1.0,
+                                         savedTransform.m12(),
+                                         savedTransform.m13(),
+                                         savedTransform.m21(),
+                                         1.0,
+                                         savedTransform.m23(),
+                                         savedTransform.m31(),
+                                         savedTransform.m32(),
+                                         savedTransform.m33());
 
-QImage* XPDFRenderer::createPDFImage(int pageNumber, qreal xscale, qreal yscale, const QRectF &bounds)
-{
-    if (isValid())
-    {
-        SplashColor paperColor = {0xFF, 0xFF, 0xFF}; // white
-        if(mSplash)
-            delete mSplash;
-        mSplash = new SplashOutputDev(splashModeRGB8, 1, false, paperColor);
-        mSplash->startDoc(mDocument);
-        int rotation = 0; // in degrees (get it from the worldTransform if we want to support rotation)
-        bool useMediaBox = false;
-        bool crop = true;
-        bool printing = false;
-        mSliceX = 0.;
-        mSliceY = 0.;
+        p->setWorldTransform(withoutScaleTransform);
 
-        if (bounds.isNull())
+        QRectF pdfPageRectF = QRectF(QPointF(0.0, 0.0), pageSizeF(pageNumber));
+        if( bounds.isNull() || bounds.contains(pdfPageRectF) )
         {
-            mDocument->displayPage(mSplash, pageNumber, this->dpiForRendering * xscale, this->dpiForRendering *yscale,
-                                   rotation, useMediaBox, crop, printing);
+            // BUG : this->dpiForRendering is 0.0
+            //QImage image = pdfPage->renderToImage(this->dpiForRendering*savedTransform.m11(),this->dpiForRendering*savedTransform.m22());
+            QImage image = pdfPage->renderToImage(72.0*savedTransform.m11(),72.0*savedTransform.m22());
+            p->drawImage(QPointF(0.0,0.0), image);
         }
         else
         {
-            mSliceX = bounds.x() * xscale;
-            mSliceY = bounds.y() * yscale;
-            qreal sliceW = bounds.width() * xscale;
-            qreal sliceH = bounds.height() * yscale;
-
-            mDocument->displayPageSlice(mSplash, pageNumber, this->dpiForRendering * xscale, this->dpiForRendering * yscale,
-                rotation, useMediaBox, crop, printing, mSliceX, mSliceY, sliceW, sliceH);
+            QRectF pdfBounds = bounds.intersected(pdfPageRectF);
+            // BUG : this->dpiForRendering is 0.0
+            //QImage image = pdfPage->renderToImage(this->dpiForRendering*savedTransform.m11(),
+            //                                      this->dpiForRendering*savedTransform.m22(),
+            //                                      pdfBounds.x(),
+            //                                      pdfBounds.y(),
+            //                                      pdfBounds.width(),
+            //                                      pdfBounds.height());
+            QImage image = pdfPage->renderToImage(72.0*savedTransform.m11(),
+                                                  72.0*savedTransform.m22(),
+                                                  pdfBounds.x(),
+                                                  pdfBounds.y(),
+                                                  pdfBounds.width(),
+                                                  pdfBounds.height());
+            p->drawImage(QPointF(pdfBounds.width()*savedTransform.m11(),pdfBounds.height()*savedTransform.m22()), image);
         }
 
-        mpSplashBitmap = mSplash->getBitmap();
+        p->setWorldTransform(savedTransform);
     }
-    return new QImage(mpSplashBitmap->getDataPtr(), mpSplashBitmap->getWidth(), mpSplashBitmap->getHeight(), mpSplashBitmap->getWidth() * 3, QImage::Format_RGB888);
 }
+

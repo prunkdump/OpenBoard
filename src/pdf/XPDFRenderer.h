@@ -31,18 +31,9 @@
 #define XPDFRENDERER_H
 #include <QImage>
 #include "PDFRenderer.h"
-#include <splash/SplashBitmap.h>
+#include <poppler-qt5.h>
 
 #include "globals/UBGlobals.h"
-
-THIRD_PARTY_WARNINGS_DISABLE
-#include <poppler/Object.h>
-#include <poppler/GlobalParams.h>
-#include <poppler/SplashOutputDev.h>
-#include <poppler/PDFDoc.h>
-THIRD_PARTY_WARNINGS_ENABLE
-
-class PDFDoc;
 
 class XPDFRenderer : public PDFRenderer
 {
@@ -66,16 +57,9 @@ class XPDFRenderer : public PDFRenderer
         void render(QPainter *p, int pageNumber, const QRectF &bounds = QRectF());
 
     private:
-        void init();
-        QImage* createPDFImage(int pageNumber, qreal xscale = 0.5, qreal yscale = 0.5, const QRectF &bounds = QRectF());
-
-        PDFDoc *mDocument;
+        Poppler::Document *mDocument;
         static QAtomicInt sInstancesCount;
-        qreal mSliceX;
-        qreal mSliceY;
 
-        SplashBitmap* mpSplashBitmap;
-        SplashOutputDev* mSplash;
 };
 
 #endif // XPDFRENDERER_H

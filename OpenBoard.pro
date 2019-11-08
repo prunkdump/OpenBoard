@@ -1,7 +1,7 @@
 TARGET = "OpenBoard"
 TEMPLATE = app
 
-THIRD_PARTY_PATH=../OpenBoard-ThirdParty
+#THIRD_PARTY_PATH=../OpenBoard-ThirdParty
 
 CONFIG -= flat
 CONFIG += debug_and_release \
@@ -10,8 +10,8 @@ CONFIG += debug_and_release \
 
 VERSION_MAJ = 1
 VERSION_MIN = 5
-VERSION_PATCH = 4
-VERSION_TYPE = a # a = alpha, b = beta, rc = release candidate, r = release, other => error
+VERSION_PATCH = 3
+VERSION_TYPE = r # a = alpha, b = beta, rc = release candidate, r = release, other => error
 VERSION_BUILD = 0
 
 VERSION = "$${VERSION_MAJ}.$${VERSION_MIN}.$${VERSION_PATCH}-$${VERSION_TYPE}.$${VERSION_BUILD}"
@@ -45,7 +45,7 @@ QT += core
 
 INCLUDEPATH += src
 
-include($$THIRD_PARTY_PATH/libs.pri)
+include(src/base.pri)
 include(src/adaptors/adaptors.pri)
 include(src/api/api.pri)
 include(src/board/board.pri)
@@ -71,9 +71,9 @@ include(plugins/plugins.pri)
 INCLUDEPATH += plugins/cffadaptor/src
 
 #ThirdParty
-DEPENDPATH += $$THIRD_PARTY_PATH/quazip/
-INCLUDEPATH += $$THIRD_PARTY_PATH/quazip/
-include($$THIRD_PARTY_PATH/quazip/quazip.pri)
+#DEPENDPATH += $$THIRD_PARTY_PATH/quazip/
+#INCLUDEPATH += $$THIRD_PARTY_PATH/quazip/
+#include($$THIRD_PARTY_PATH/quazip/quazip.pri)
 
 FORMS += resources/forms/mainWindow.ui \
    resources/forms/preferences.ui \
@@ -89,9 +89,9 @@ UB_ETC.files = resources/etc
 UB_I18N.files = resources/i18n/*.qm
 UB_LIBRARY.files = resources/library
 UB_FONTS.files = resources/fonts
-UB_THIRDPARTY_INTERACTIVE.files = thirdparty/interactive
+#UB_THIRDPARTY_INTERACTIVE.files = thirdparty/interactive
 
-DEFINES += NO_THIRD_PARTY_WARNINGS
+#DEFINES += NO_THIRD_PARTY_WARNINGS
 DEFINES += UBVERSION=\"\\\"$${LONG_VERSION}\"\\\" \
    UBVERSION_RC=$$VERSION_RC
 ALPHA_BETA_STR = $$find(VERSION, "[ab]")
@@ -132,7 +132,7 @@ win32 {
    UB_LIBRARY.path = $$DESTDIR
    UB_I18N.path = $$DESTDIR/i18n
    UB_ETC.path = $$DESTDIR
-   UB_THIRDPARTY_INTERACTIVE.path = $$DESTDIR/library
+   #UB_THIRDPARTY_INTERACTIVE.path = $$DESTDIR/library
    system(md $$replace(BUILD_DIR, /, \\))
    system(echo "$$VERSION" > $$BUILD_DIR/version)
    system(echo "$$LONG_VERSION" > $$BUILD_DIR/longversion)
@@ -204,8 +204,8 @@ macx {
    UB_LIBRARY.path = "$$RESOURCES_DIR"
    UB_FONTS.files = "resources/fonts"
    UB_FONTS.path = "$$RESOURCES_DIR"
-   UB_THIRDPARTY_INTERACTIVE.files = $$files($$THIRD_PARTY_PATH/interactive/*)
-   UB_THIRDPARTY_INTERACTIVE.path = "$$RESOURCES_DIR/library/interactive"
+   #UB_THIRDPARTY_INTERACTIVE.files = $$files($$THIRD_PARTY_PATH/interactive/*)
+   #UB_THIRDPARTY_INTERACTIVE.path = "$$RESOURCES_DIR/library/interactive"
    UB_MACX_ICNS.files = $$files(resources/macx/*.icns)
    UB_MACX_ICNS.path = "$$RESOURCES_DIR"
    UB_MACX_EXTRAS.files = "resources/macx/Save PDF to OpenBoard.workflow"
@@ -408,7 +408,7 @@ macx {
    QMAKE_BUNDLE_DATA += UB_ETC \
        UB_LIBRARY \
        UB_FONTS \
-       UB_THIRDPARTY_INTERACTIVE \
+       #UB_THIRDPARTY_INTERACTIVE \
        UB_MACX_ICNS \
        UB_MACX_EXTRAS \
        SPARKLE_KEY \
@@ -435,7 +435,7 @@ linux-g++* {
     UB_LIBRARY.path = $$DESTDIR
     UB_I18N.path = $$DESTDIR/i18n
     UB_ETC.path = $$DESTDIR
-    UB_THIRDPARTY_INTERACTIVE.path = $$DESTDIR/library
+    #UB_THIRDPARTY_INTERACTIVE.path = $$DESTDIR/library
     system(mkdir -p $$BUILD_DIR)
     system(echo "$$VERSION" > $$BUILD_DIR/version)
     system(echo "$$LONG_VERSION" > $$BUILD_DIR/longversion)
@@ -481,7 +481,7 @@ TRANSLATIONS = resources/i18n/OpenBoard_en.ts \
 INSTALLS = UB_ETC \
    UB_I18N \
    UB_LIBRARY \
-   UB_THIRDPARTY_INTERACTIVE
+   #UB_THIRDPARTY_INTERACTIVE
 
 DISTFILES += \
     resources/images/moveDown.svg \

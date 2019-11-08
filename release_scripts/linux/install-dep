@@ -1,0 +1,61 @@
+#!/bin/bash
+
+#build-essential
+
+
+#libfreetype6-dev -lfreetype
+#libquazip5-dev -lquazip
+#libpaper-dev -lpaper
+
+#qt5-default
+#libqt5webkit5-dev
+#libqt5svg5-dev
+#libqt5networkauth5-dev
+#libqt5xml5 ?
+
+
+#libqt5xmlpatterns5-dev
+
+#libqt5script5 ?
+#qtscript5-dev
+
+#libqt5multimedia5 ?
+#qtmultimedia5-dev
+
+
+#libssl-dev
+#libmotif-dev
+#qttools5-dev
+
+#libpoppler-dev ?
+#libpoppler-private-dev ?
+#libpoppler-qt5-dev
+
+#libavcodec-dev
+#libavformat-dev
+#libswscale-dev
+#libva-dev
+#libxcb-shm0-dev
+#libasound2-dev
+#libsdl2-dev ?
+#libsdl1.2-dev
+#libx264-dev
+#libvpx-dev
+#libvorbis-dev
+#libtheora-dev
+#libopus-dev
+#libmp3lame-dev
+#libfdk-aac-dev (non-free)
+#libass-dev
+#liblzma-dev
+#libbz2-dev
+
+#libnotify-bin
+#zip
+
+apt-get install build-essential libfreetype6-dev libquazip5-dev libpaper-dev qt5-default libqt5webkit5-dev libqt5svg5-dev libqt5networkauth5-dev libqt5xmlpatterns5-dev qtscript5-dev qtmultimedia5-dev libssl-dev libmotif-dev qttools5-dev libpoppler-qt5-dev libavcodec-dev libavformat-dev libswscale-dev libva-dev libxcb-shm0-dev libasound2-dev libsdl1.2-dev libx264-dev libvpx-dev libvorbis-dev libtheora-dev libopus-dev libmp3lame-dev libfdk-aac-dev libass-dev liblzma-dev libbz2-dev libnotify-bin zip
+
+
+
+
+
